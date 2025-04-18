@@ -95,7 +95,7 @@ if __name__ == '__main__':
     # fake_facts_path = '../data/benchmark/random.json'
     # top_views_path = '../data/benchmark/popular.json'
     model = 'llama3.1-1b-base-eos-sft'
-    recent_popular_path = f"{os.getenv("PROJ_PLAYGROUND")}/KE-by-CP/data/ripple_edits/meta_train_recent+popular/test.jsonl"
+    recent_popular_path = f"{os.getenv('PROJ_PLAYGROUND')}/KE-by-CP/data/ripple_edits/meta_train_recent+popular/test.jsonl"
     editor = "memit"
     
     dataset_path = recent_popular_path
@@ -111,7 +111,7 @@ if __name__ == '__main__':
 
     # davinvci_query_executor = Llama3QueryExecutor(model_size='text-davinci-003')
     if model == 'llama3.1-1b-base-eos-sft':
-        query_executor = Llama3QueryExecutor(model_name_or_path="/u/zliu/datastor1/mend/models/Llama-3.2-1B-eos-sft", edit_config_name="llama3.2-1B-eos-sft-mid-upper")
+        query_executor = Llama3QueryExecutor(model_name_or_path=f"{os.getenv('PROJ_PLAYGROUND')}/mend/models/Llama-3.2-1B-eos-sft", edit_config_name="llama3.2-1B-eos-sft-mid-upper")
     else:
         raise ValueError(f'Unknown model: {model}')
 

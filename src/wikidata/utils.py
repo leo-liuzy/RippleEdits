@@ -161,7 +161,7 @@ def ent_to_relation_ids(ent_id: str):
 # with zipfile.ZipFile('/u/zliu/datastor1/RippleEdits/src/wikidata/ent_label2id.json.zip', 'r') as zip_ref:
 #     zip_ref.extractall('/u/zliu/datastor1/RippleEdits/src/wikidata/ent_label2id.json')
 
-ent_label2id_dict = load_json('/u/zliu/datastor1/RippleEdits/src/wikidata/ent_label2id.json')
+ent_label2id_dict = load_json(f"{os.getenv('PROJ_PLAYGROUND')}/RippleEdits/src/wikidata/ent_label2id.json")
 
 
 def ent_label2id(label: str):

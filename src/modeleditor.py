@@ -55,7 +55,7 @@ class RomeStyleModelEditor(ModelEditor):
         if self._changed_weights is None:
             return
 
-        sys.path.append('/u/zliu/datastor1/memit_original')
+        sys.path.append(f"{os.getenv('PROJ_PLAYGROUND')}/memit_original")
         # import pdb; pdb.set_trace()
         from util import nethook
 
@@ -75,10 +75,10 @@ class MEMITModelEditor(RomeStyleModelEditor):
     def edit_model(self, fact):
         
         # os.chdir('/u/zliu/datastor1/RippleEdits/src/memit')
-        sys.path.append('/u/zliu/datastor1/memit_original')
+        sys.path.append(f"{os.getenv('PROJ_PLAYGROUND')}/memit_original")
         from memit import MEMITHyperParams, apply_memit_to_model
         requests = self._format_fact_for_rome(fact)
-        hparams = MEMITHyperParams.from_json(f'/u/zliu/datastor1/memit_original/hparams/MEMIT/{self._model_name}.json')
+        hparams = MEMITHyperParams.from_json(f"{os.getenv('PROJ_PLAYGROUND')}/memit_original/hparams/MEMIT/{self._model_name}.json")
         _, self._changed_weights = apply_memit_to_model(self._model, self._tokenizer, requests, hparams, return_orig_weights=True)
 
 
