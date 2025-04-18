@@ -153,6 +153,10 @@ class RecentlyAddedExample(Example):
     def to_dict(self):
         return super().create_example_dict('recently_added_fact')
 
+def load_jsonlines(fname: str):
+    """Read jsonlines file."""
+    with open(fname, "r") as f:
+        return [json.loads(line) for line in f]
 
 class Dataset:
 
@@ -173,4 +177,9 @@ class Dataset:
     def from_file(filename):
         with open(filename, 'r', encoding='utf-8') as f:
             examples = json.load(f)
+        return Dataset([Example.from_dict(example) for example in examples])
+
+    @staticmethod
+    def from_jsonl(filename):
+        examples = load_jsonlines(filename)
         return Dataset([Example.from_dict(example) for example in examples])

@@ -55,16 +55,16 @@ class RomeStyleModelEditor(ModelEditor):
         if self._changed_weights is None:
             return
 
-        os.chdir('./memit')
-        sys.path.append('..')
+        sys.path.append('/u/zliu/datastor1/memit_original')
+        # import pdb; pdb.set_trace()
         from util import nethook
 
         with torch.no_grad():
             for k, v in self._changed_weights.items():
                 nethook.get_parameter(self._model, k)[...] = v.to(self._model_device)
 
-        sys.path.remove('..')
-        os.chdir('../..')
+        # sys.path.remove('..')
+        # os.chdir('../..')
 
 
 class MEMITModelEditor(RomeStyleModelEditor):
@@ -73,16 +73,13 @@ class MEMITModelEditor(RomeStyleModelEditor):
         super().__init__(query_executor)
 
     def edit_model(self, fact):
-        os.chdir('./memit')
-        sys.path.append('..')
+        
+        # os.chdir('/u/zliu/datastor1/RippleEdits/src/memit')
+        sys.path.append('/u/zliu/datastor1/memit_original')
         from memit import MEMITHyperParams, apply_memit_to_model
-
         requests = self._format_fact_for_rome(fact)
-        hparams = MEMITHyperParams.from_json(f'hparams/MEMIT/{self._model_name}.json')
+        hparams = MEMITHyperParams.from_json(f'/u/zliu/datastor1/memit_original/hparams/MEMIT/{self._model_name}.json')
         _, self._changed_weights = apply_memit_to_model(self._model, self._tokenizer, requests, hparams, return_orig_weights=True)
-
-        sys.path.remove('..')
-        os.chdir('../..')
 
 
 class ROMEModelEditor(RomeStyleModelEditor):

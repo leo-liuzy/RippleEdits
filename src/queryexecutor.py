@@ -41,6 +41,7 @@ class QueryExecutor:
 
     def execute_query(self, query, answer_length=30):
         prompt = self._prompt_context + query.get_query_prompt()
+        # import pdb; pdb.set_trace()
         model_answer = self._generate_text(prompt, len(prompt) + answer_length)
         model_answer = model_answer.replace(self._prompt_context, '', 1)
         print(f'query: {query.to_dict()}\nmodel answer: {model_answer}')
@@ -63,7 +64,9 @@ class HFQueryExecutor(QueryExecutor):
 
     def _generate_text(self, prompt, length):
         inputs = self._tokenizer.encode(prompt, return_tensors='pt').to(self._device)
-        outputs = self._model.generate(inputs, temperature=0, max_length=length)
+        # greedy decode
+        # outputs = self._model.generate(inputs, temperature=0, max_length=length) # deprecated call
+        outputs = self._model.generate(inputs, do_sample=False, num_beams=1, max_length=length, temperature=None, top_p=None)
         return self._tokenizer.decode(outputs[0], skip_special_tokens=True)
 
 
@@ -121,6 +124,28 @@ class LlamaQueryExecutor(HFQueryExecutor):
             tokenizer.pad_token = tokenizer.eos_token
         if model is None:
             model = LlamaForCausalLM.from_pretrained(f'huggyllama/{self._model_name}', device_map="auto", offload_folder="offload", offload_state_dict=True)
+        super().__init__(model, tokenizer, device, send_to_device=False)
+
+    def get_model_name(self):
+        return self._model_name
+
+class Llama3QueryExecutor(HFQueryExecutor):
+
+    def __init__(self, model_size='1b', device=None, model=None, tokenizer=None, model_name_or_path=None, edit_config_name=None):
+        import os
+        self._model_size = model_size
+        self._model_name = os.path.basename(model_name_or_path) if not edit_config_name else edit_config_name
+        # import pdb; pdb.set_trace()
+        if tokenizer is None:
+            tokenizer = AutoTokenizer.from_pretrained(model_name_or_path, use_fast=False, add_bos_token=True)
+            tokenizer.add_special_tokens({"pad_token": "[PAD]"})
+            tokenizer.padding_side = "left"
+        # tokenizer.pad_token = tokenizer.eos_token
+        if model is None:
+            model = LlamaForCausalLM.from_pretrained(model_name_or_path, device_map="auto", offload_folder="offload", offload_state_dict=True)
+        # import pdb; pdb.set_trace()
+        model.resize_token_embeddings(len(tokenizer))
+        model.generation_config.pad_token_id = tokenizer.pad_token_id
         super().__init__(model, tokenizer, device, send_to_device=False)
 
     def get_model_name(self):
