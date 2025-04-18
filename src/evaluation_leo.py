@@ -1,5 +1,6 @@
 from collections import defaultdict
 
+import os
 from benchmark import Dataset, Example, TestsAxis
 from modeleditor import ROMEModelEditor, InContextModelEditor, MENDModelEditor, MEMITModelEditor
 from queryexecutor import GPT2QueryExecutor, GPT3QueryExecutor, GPTJQueryExecutor, GPTNeoXQueryExecutor, \
@@ -94,7 +95,7 @@ if __name__ == '__main__':
     # fake_facts_path = '../data/benchmark/random.json'
     # top_views_path = '../data/benchmark/popular.json'
     model = 'llama3.1-1b-base-eos-sft'
-    recent_popular_path = "/u/zliu/datastor1/KE-by-CP/data/ripple_edits/meta_train_recent+popular/test.jsonl"
+    recent_popular_path = f"{os.getenv("PROJ_PLAYGROUND")}/KE-by-CP/data/ripple_edits/meta_train_recent+popular/test.jsonl"
     editor = "memit"
     
     dataset_path = recent_popular_path
