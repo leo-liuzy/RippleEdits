@@ -160,3 +160,4 @@ cython_debug/
 #.idea/
 #
 src/wikidata/ent_label2id.json
+__MACOSX/
