@@ -2,7 +2,7 @@ from collections import defaultdict
 
 import os
 from benchmark import Dataset, Example, TestsAxis
-from modeleditor import ROMEModelEditor, InContextModelEditor, MENDModelEditor, MEMITModelEditor
+from modeleditor import ROMEModelEditor, InContextModelEditor, MENDModelEditor, MEMITModelEditor, NoEditModelEditor
 from queryexecutor import GPT2QueryExecutor, GPT3QueryExecutor, GPTJQueryExecutor, GPTNeoXQueryExecutor, \
     LlamaQueryExecutor, Llama3QueryExecutor
 from testrunner import ExampleResult
@@ -22,8 +22,8 @@ class Evaluator:
     def average_acc(self, example: Example, test_cases: list, skip_edit: bool = False, skip_restore: bool = False):
         if not len(test_cases) and skip_edit:
             return 0.0, 0.0, 0.0, False
-
-        run_res = self._test_runner.run_testcases(example, test_cases, skip_edit=skip_edit, skip_restore=skip_restore)
+        
+        run_res = self._test_runner.run_testcases(example, test_cases, skip_edit=skip_edit, skip_restore=skip_restore, skip_preconditions=False)
         fact_edit_succeeded, res_dict = run_res
         edit_succeeded = True
         if fact_edit_succeeded == ExampleResult.EDIT_FAILED:
@@ -31,7 +31,7 @@ class Evaluator:
 
         if not len(test_cases):
             return 0.0, 0.0, 0.0, edit_succeeded
-
+        # import pdb; pdb.set_trace()
         werent_executed = len(res_dict[TestResult.NOT_EXECUTED])
         successes = len(res_dict[TestResult.PASSED])
         fails = len(res_dict[TestResult.FAILED])
@@ -39,31 +39,36 @@ class Evaluator:
         return successes / (successes + fails) if successes else 0.0, executed, len(test_cases), edit_succeeded
 
     def evaluate_making_up_axis(self, example: Example):
+        # relation specificity
         return self.average_acc(example, example.making_up_tests)
 
     def evaluate_logical_constraints(self, example: Example):
         return self.average_acc(example, example.logical_constraints)
 
     def evaluate_subject_paraphrasing(self, example: Example):
+        # subject aliasing
         return self.average_acc(example, example.subject_paraphrasing_tests)
 
     def evaluate_two_hop_tests(self, example: Example):
+        # Compositionality_I
         return self.average_acc(example, example.two_hop_tests)
 
     def evaluate_forward_two_hop_tests(self, example: Example):
+        # Compositionality_II
         return self.average_acc(example, example.forward_two_hop_tests)
 
     def evaluate_prev_storage_tests(self, example: Example):
+        # Forgetfulness
         return self.average_acc(example, example.prev_storage_tests)
 
     def evaluate(self, example: Example):
         res = defaultdict()
-        res[TestsAxis.MAKING_UP] = self.evaluate_making_up_axis(example)
+        # res[TestsAxis.MAKING_UP] = self.evaluate_making_up_axis(example)
         res[TestsAxis.LOGICAL_CONSTRAINTS] = self.evaluate_logical_constraints(example)
-        res[TestsAxis.SUBJECT_PARAPHRASING] = self.evaluate_subject_paraphrasing(example)
-        res[TestsAxis.TWO_HOP] = self.evaluate_two_hop_tests(example)
+        # res[TestsAxis.SUBJECT_PARAPHRASING] = self.evaluate_subject_paraphrasing(example)
+        # res[TestsAxis.TWO_HOP] = self.evaluate_two_hop_tests(example)
         res[TestsAxis.FORWARD_TWO_HOP] = self.evaluate_forward_two_hop_tests(example)
-        res[TestsAxis.PREVIOUS_STORAGE] = self.evaluate_prev_storage_tests(example)
+        # res[TestsAxis.PREVIOUS_STORAGE] = self.evaluate_prev_storage_tests(example)
         return res
 
 
@@ -96,7 +101,7 @@ if __name__ == '__main__':
     # top_views_path = '../data/benchmark/popular.json'
     model = 'llama3.1-1b-base-eos-sft'
     recent_popular_path = f"{os.getenv('PROJ_PLAYGROUND')}/KE-by-CP/data/ripple_edits/meta_train_recent+popular/test.jsonl"
-    editor = "memit"
+    editor = "no-edit"
     
     dataset_path = recent_popular_path
 
@@ -108,6 +113,7 @@ if __name__ == '__main__':
 
     experiment_name = f'{model}_{editor}_{dataset_name}'
     print(experiment_name)
+    
 
     # davinvci_query_executor = Llama3QueryExecutor(model_size='text-davinci-003')
     if model == 'llama3.1-1b-base-eos-sft':
@@ -123,6 +129,8 @@ if __name__ == '__main__':
         model_editor = MEMITModelEditor(query_executor)
     elif editor == 'in-context':
         model_editor = InContextModelEditor(query_executor)
+    elif editor == "no-edit":
+        model_editor = NoEditModelEditor(query_executor)
     else:
         raise ValueError(f'Unknown model editor: {editor}')
     # import pdb; pdb.set_trace()
@@ -131,7 +139,7 @@ if __name__ == '__main__':
 
     precisions_json = dict()
     # num_of_examples = 200
-    examples_for_eval = dataset.examples
+    examples_for_eval = dataset.examples[:]
     # examples_for_eval = dataset.sample(num_of_examples)
     eval_size = len(examples_for_eval)
 
@@ -155,15 +163,15 @@ if __name__ == '__main__':
         res_dict_for_json = dict()
         for axis, results in evaluation_results.items():
             precision, executed, size, edit_succeeded = results
-            if executed == 0.0:
-                continue
-            if edit_succeeded:
-                succeeded_edits[axis] += 1
-                average_precision[axis] += precision
-                res_dict_for_json[axis.name] = precision
-                average_executed[axis] += executed
-                average_size[axis] += size
-                # precisions_json[str(example.fact)] = precision
+            # if executed == 0.0:
+                # continue
+            # if edit_succeeded:
+            # succeeded_edits[axis] += 1
+            average_precision[axis] += precision
+            res_dict_for_json[axis.name] = precision
+            average_executed[axis] += executed
+            average_size[axis] += size
+            # precisions_json[str(example.fact)] = precision
             total_checked_examples[axis] += 1
 
         precisions_json[str(example.fact)] = res_dict_for_json
@@ -181,19 +189,23 @@ if __name__ == '__main__':
             print(f'No checked tests for this axis')
             res_str += f'No checked tests for this axis\n'
             continue
+        
+        # import pdb; pdb.set_trace()
+        # if succeeded_edits[axis] > 0:
+        #     average_precision[axis] /= succeeded_edits[axis]
+        #     average_executed[axis] /= succeeded_edits[axis]
+        #     average_size[axis] /= succeeded_edits[axis]
 
-        average_precision[axis] /= succeeded_edits[axis]
-        average_executed[axis] /= succeeded_edits[axis]
-        average_size[axis] /= succeeded_edits[axis]
-
-        print(f'{(succeeded_edits[axis] / eval_size) * 100} successful edits (out of {eval_size})')
-        res_str += f'{(succeeded_edits[axis] / eval_size) * 100} successful edits (out of {eval_size})\n'
+        # print(f'{succeeded_edits[axis]} successful edits (out of {eval_size})')
+        # res_str += f'{succeeded_edits[axis]} successful edits (out of {eval_size})\n'
         print(f'Average accuracy is {average_precision[axis]}')
         res_str += f'Average accuracy is {average_precision[axis]}\n'
         print(f'Average portion of executed_tests is {average_executed[axis]}')
         res_str += f'Average portion of executed_tests is {average_executed[axis]}\n'
         print(f'Average total number of tests is {average_size[axis]}')
         res_str += f'Average total number of tests is {average_size[axis]}\n'
+        print("total_checked_examples[axis]: ", total_checked_examples[axis])
+        res_str += f'total_checked_examples[axis]: {total_checked_examples[axis]}\n'
 
     write_json(precisions_json, f'./{experiment_name}_res_2.json')
 

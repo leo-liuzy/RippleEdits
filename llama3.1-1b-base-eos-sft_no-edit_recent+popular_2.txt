@@ -1,0 +1,20 @@
+Results of axis TestsAxis.MAKING_UP:
+No checked tests for this axis
+Results of axis TestsAxis.LOGICAL_CONSTRAINTS:
+3 successful edits (out of 200)
+Average accuracy is 0.3333333333333333
+Average portion of executed_tests is 0.6666666666666666
+Average total number of tests is 3.0
+total_checked_examples[axis]: 60
+Results of axis TestsAxis.SUBJECT_PARAPHRASING:
+No checked tests for this axis
+Results of axis TestsAxis.TWO_HOP:
+No checked tests for this axis
+Results of axis TestsAxis.FORWARD_TWO_HOP:
+0 successful edits (out of 200)
+Average accuracy is 0
+Average portion of executed_tests is 0
+Average total number of tests is 0
+total_checked_examples[axis]: 2
+Results of axis TestsAxis.PREVIOUS_STORAGE:
+No checked tests for this axis

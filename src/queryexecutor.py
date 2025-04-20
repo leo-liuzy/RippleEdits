@@ -35,17 +35,19 @@ class QueryExecutor:
     @staticmethod
     def _verify_answer(model_answer, correct_answer):
         for answer in correct_answer:
-            if True not in [possible_answer in model_answer for possible_answer in answer]:
+            # if True not in [possible_answer in model_answer for possible_answer in answer]:
+            if True not in [possible_answer == model_answer for possible_answer in answer]:
                 return False
         return True
 
     def execute_query(self, query, answer_length=30):
         prompt = self._prompt_context + query.get_query_prompt()
-        # import pdb; pdb.set_trace()
         model_answer = self._generate_text(prompt, len(prompt) + answer_length)
-        model_answer = model_answer.replace(self._prompt_context, '', 1)
+        # import pdb; pdb.set_trace()
+        # model_answer = model_answer.replace(self._prompt_context, '', 1)
+        model_answer = model_answer.replace(prompt, '', 1)
         print(f'query: {query.to_dict()}\nmodel answer: {model_answer}')
-        return self._verify_answer(model_answer, query.get_answers())
+        return self._verify_answer(model_answer.strip(), query.get_answers())
 
     def get_model_name(self):
         raise NotImplementedError()  # Override in concrete classes

@@ -33,6 +33,19 @@ class InContextModelEditor(ModelEditor):
 
     def restore_model(self):
         self._query_executor.set_prompt_context('')
+        
+
+class NoEditModelEditor(ModelEditor):
+
+    def __init__(self, query_executor: QueryExecutor):
+        super().__init__(query_executor)
+
+    def edit_model(self, fact):
+        context = ""
+        self._query_executor.set_prompt_context(context)
+
+    def restore_model(self):
+        self._query_executor.set_prompt_context('')
 
 
 class RomeStyleModelEditor(ModelEditor):
