@@ -11,6 +11,7 @@ from wikidata.utils import write_json
 import pdb
 from tqdm import tqdm
 
+skip_preconditions = True # We should always skip preconditions for the evaluation
 
 class Evaluator:
 
@@ -23,7 +24,7 @@ class Evaluator:
         if not len(test_cases) and skip_edit:
             return 0.0, 0.0, 0.0, False
         
-        run_res = self._test_runner.run_testcases(example, test_cases, skip_edit=skip_edit, skip_restore=skip_restore, skip_preconditions=False)
+        run_res = self._test_runner.run_testcases(example, test_cases, skip_edit=skip_edit, skip_restore=skip_restore, skip_preconditions=skip_preconditions)
         fact_edit_succeeded, res_dict = run_res
         edit_succeeded = True
         if fact_edit_succeeded == ExampleResult.EDIT_FAILED:
@@ -63,12 +64,12 @@ class Evaluator:
 
     def evaluate(self, example: Example):
         res = defaultdict()
-        # res[TestsAxis.MAKING_UP] = self.evaluate_making_up_axis(example)
         res[TestsAxis.LOGICAL_CONSTRAINTS] = self.evaluate_logical_constraints(example)
-        # res[TestsAxis.SUBJECT_PARAPHRASING] = self.evaluate_subject_paraphrasing(example)
-        # res[TestsAxis.TWO_HOP] = self.evaluate_two_hop_tests(example)
+        res[TestsAxis.TWO_HOP] = self.evaluate_two_hop_tests(example)
         res[TestsAxis.FORWARD_TWO_HOP] = self.evaluate_forward_two_hop_tests(example)
-        # res[TestsAxis.PREVIOUS_STORAGE] = self.evaluate_prev_storage_tests(example)
+        res[TestsAxis.SUBJECT_PARAPHRASING] = self.evaluate_subject_paraphrasing(example)
+        res[TestsAxis.MAKING_UP] = self.evaluate_making_up_axis(example)
+        res[TestsAxis.PREVIOUS_STORAGE] = self.evaluate_prev_storage_tests(example)
         return res
 
 
@@ -93,20 +94,25 @@ if __name__ == '__main__':
         'mend',
         'rome',
         'memit',
-        'in-context'
+        'in-context',
+        "no-edit",
+        "know-prop",
     ]
 
     # recently_modified_path = '../data/benchmark/recent.json'
     # fake_facts_path = '../data/benchmark/random.json'
     # top_views_path = '../data/benchmark/popular.json'
     model = 'llama3.1-1b-base-eos-sft'
-    recent_popular_path = f"{os.getenv('PROJ_PLAYGROUND')}/KE-by-CP/data/ripple_edits/meta_train_recent+popular/test.jsonl"
-    editor = "no-edit"
-    
-    dataset_path = recent_popular_path
+    recent_popular_path = f"{os.getenv('PROJ_PLAYGROUND')}/KE-by-CP/data/ripple_edits/meta_train/recent+popular/test.jsonl"
+    all_path = f"{os.getenv('PROJ_PLAYGROUND')}/KE-by-CP/data/ripple_edits/meta_train/all/test.jsonl"
+    editor = "know-prop"
+    # get_fact_prompt
+    dataset_path = all_path
 
 
-    if dataset_path == recent_popular_path:
+    if dataset_path == all_path:
+        dataset_name = 'all'
+    elif dataset_path == recent_popular_path:
         dataset_name = 'recent+popular'
     else:
         raise ValueError(f'Unknown dataset path: {dataset_path}')
@@ -139,7 +145,7 @@ if __name__ == '__main__':
 
     precisions_json = dict()
     # num_of_examples = 200
-    examples_for_eval = dataset.examples[:]
+    examples_for_eval = dataset.examples[:50]
     # examples_for_eval = dataset.sample(num_of_examples)
     eval_size = len(examples_for_eval)
 
@@ -161,51 +167,58 @@ if __name__ == '__main__':
         evaluation_results = evaluator.evaluate(example)
 
         res_dict_for_json = dict()
-        for axis, results in evaluation_results.items():
+        for propagation_type, results in evaluation_results.items():
             precision, executed, size, edit_succeeded = results
             # if executed == 0.0:
                 # continue
             # if edit_succeeded:
             # succeeded_edits[axis] += 1
-            average_precision[axis] += precision
-            res_dict_for_json[axis.name] = precision
-            average_executed[axis] += executed
-            average_size[axis] += size
+            average_precision[propagation_type] += precision
+            res_dict_for_json[propagation_type.name] = precision
+            average_executed[propagation_type] += executed
+            average_size[propagation_type] += size
             # precisions_json[str(example.fact)] = precision
-            total_checked_examples[axis] += 1
+            total_checked_examples[propagation_type] += 1
 
         precisions_json[str(example.fact)] = res_dict_for_json
 
-        for axis in TestsAxis:
-            if axis in evaluation_results:
-                executed_portion_dict[axis] += evaluation_results[axis][1]
+        for propagation_type in TestsAxis:
+            if propagation_type in evaluation_results:
+                executed_portion_dict[propagation_type] += evaluation_results[propagation_type][1]
 
-    res_str = ''
-    for axis in TestsAxis:
-        print(f'Results of axis {axis}:')
-        res_str += f'Results of axis {axis}:\n'
+    res_str = f'skip_preconditions={skip_preconditions}\n'
+    print(res_str)
+    for propagation_type in TestsAxis:
+        print(f'Results of axis {propagation_type}:')
+        res_str += f'Results of axis {propagation_type}:\n'
 
-        if total_checked_examples[axis] == 0:
+        if total_checked_examples[propagation_type] == 0:
             print(f'No checked tests for this axis')
             res_str += f'No checked tests for this axis\n'
             continue
         
-        # import pdb; pdb.set_trace()
+        # pdb.set_trace()
         # if succeeded_edits[axis] > 0:
         #     average_precision[axis] /= succeeded_edits[axis]
         #     average_executed[axis] /= succeeded_edits[axis]
         #     average_size[axis] /= succeeded_edits[axis]
+            
+        assert total_checked_examples[propagation_type] > 0
+        average_precision[propagation_type] /= total_checked_examples[propagation_type]
+        average_executed[propagation_type] /= total_checked_examples[propagation_type]
+        average_size[propagation_type] /= total_checked_examples[propagation_type]
+            
 
         # print(f'{succeeded_edits[axis]} successful edits (out of {eval_size})')
         # res_str += f'{succeeded_edits[axis]} successful edits (out of {eval_size})\n'
-        print(f'Average accuracy is {average_precision[axis]}')
-        res_str += f'Average accuracy is {average_precision[axis]}\n'
-        print(f'Average portion of executed_tests is {average_executed[axis]}')
-        res_str += f'Average portion of executed_tests is {average_executed[axis]}\n'
-        print(f'Average total number of tests is {average_size[axis]}')
-        res_str += f'Average total number of tests is {average_size[axis]}\n'
-        print("total_checked_examples[axis]: ", total_checked_examples[axis])
-        res_str += f'total_checked_examples[axis]: {total_checked_examples[axis]}\n'
+        print(f'Average accuracy is {average_precision[propagation_type]}')
+        res_str += f'Average accuracy is {average_precision[propagation_type]}\n'
+        # print(f'Average portion of executed_tests is {average_executed[propagation_type]}')
+        # res_str += f'Average portion of executed_tests is {average_executed[propagation_type]}\n'
+        print(f'Average total number of tests is {average_size[propagation_type]}')
+        res_str += f'Average total number of tests is {average_size[propagation_type]}\n'
+        print("total_checked_examples[propagation_type]: ", total_checked_examples[propagation_type], "\n")
+        res_str += f'total_checked_examples[propagation_type]: {total_checked_examples[propagation_type]}\n'
 
     write_json(precisions_json, f'./{experiment_name}_res_2.json')
 

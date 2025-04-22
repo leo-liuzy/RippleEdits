@@ -61,6 +61,7 @@ class TestRunner:
         # Test modified model
         for test_case in test_cases:
             # if test_case not in test_results[TestResult.NOT_EXECUTED]:
+            # import pdb; pdb.set_trace()
             test_case_results = []
             for test_query in test_case.get_test_queries():
                 print('Executing test query')
@@ -69,7 +70,7 @@ class TestRunner:
             if test_case.get_test_condition() == TestCase.OR_TEST_CONDITION and True in test_case_results:
                 test_results[TestResult.PASSED].append(test_case)
             elif test_case.get_test_condition() == TestCase.AND_TEST_CONDITION and False not in test_case_results:
-                # assert False
+                assert False, "This should not happen"
                 test_results[TestResult.PASSED].append(test_case)
             else:
                 test_results[TestResult.FAILED].append(test_case)

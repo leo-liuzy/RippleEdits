@@ -1,20 +1,24 @@
-Results of axis TestsAxis.MAKING_UP:
-No checked tests for this axis
-Results of axis TestsAxis.LOGICAL_CONSTRAINTS:
-3 successful edits (out of 200)
-Average accuracy is 0.3333333333333333
-Average portion of executed_tests is 0.6666666666666666
-Average total number of tests is 3.0
-total_checked_examples[axis]: 60
-Results of axis TestsAxis.SUBJECT_PARAPHRASING:
-No checked tests for this axis
+skip_preconditions=TrueResults of axis TestsAxis.LOGICAL_CONSTRAINTS:
+Average accuracy is 0.023
+Average total number of tests is 0.54
+total_checked_examples[propagation_type]: 50
 Results of axis TestsAxis.TWO_HOP:
-No checked tests for this axis
+Average accuracy is 0.007833333333333333
+Average total number of tests is 1.82
+total_checked_examples[propagation_type]: 50
 Results of axis TestsAxis.FORWARD_TWO_HOP:
-0 successful edits (out of 200)
-Average accuracy is 0
-Average portion of executed_tests is 0
-Average total number of tests is 0
-total_checked_examples[axis]: 2
+Average accuracy is 0.0
+Average total number of tests is 0.42
+total_checked_examples[propagation_type]: 50
+Results of axis TestsAxis.SUBJECT_PARAPHRASING:
+Average accuracy is 0.0
+Average total number of tests is 2.74
+total_checked_examples[propagation_type]: 50
+Results of axis TestsAxis.MAKING_UP:
+Average accuracy is 0.12987323787323782
+Average total number of tests is 7.68
+total_checked_examples[propagation_type]: 50
 Results of axis TestsAxis.PREVIOUS_STORAGE:
-No checked tests for this axis
+Average accuracy is 0.02
+Average total number of tests is 0.56
+total_checked_examples[propagation_type]: 50

@@ -27,7 +27,9 @@ class InContextModelEditor(ModelEditor):
         super().__init__(query_executor)
 
     def edit_model(self, fact):
-        context = 'Imagine that ' + fact.get_fact_phrased() + '\n'
+        edit_fact = fact.get_fact_phrased()
+        
+        context = 'Imagine that ' + edit_fact[0].lower() + edit_fact[1:] + ' '
         print(f'In Context Editing added context: {context}')
         self._query_executor.set_prompt_context(context)
 
@@ -121,6 +123,29 @@ class MENDModelEditor(RomeStyleModelEditor):
     def edit_model(self, fact):
         os.chdir('./memit')
         sys.path.append('..')
+        from baselines.mend import MENDHyperParams, MendRewriteExecutor
+
+        requests = self._format_fact_for_rome(fact)
+        hparams = MENDHyperParams.from_json(f'hparams/MEND/{self._model_name}.json')
+        _, self._changed_weights = MendRewriteExecutor().apply_to_model(self._model, self._tokenizer, requests, hparams, return_orig_weights=True)
+
+        sys.path.remove('..')
+        os.chdir('../..')
+        
+    
+class KnowledgePropagatorModelEditor(RomeStyleModelEditor):
+
+    def __init__(self, query_executor):
+        super().__init__(query_executor)
+        train_set =ZsreDataset(
+            self.query_executor.tokenizer, f"{base_dir}/data/zsre/structured_zeroshot-train-new_annotated_final.jsonl", config
+        )
+        val_set = ZsreDataset(self.query_executor.tokenizer, f"{base_dir}/data/zsre/structured_zeroshot-dev-new_annotated_final.jsonl", config)
+        
+        self.trainer = EditTrainer(alg, config, train_set, val_set)
+        
+
+    def edit_model(self, fact):
         from baselines.mend import MENDHyperParams, MendRewriteExecutor
 
         requests = self._format_fact_for_rome(fact)

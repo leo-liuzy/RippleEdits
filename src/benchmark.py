@@ -8,11 +8,11 @@ from testcase import TestCase
 
 
 class TestsAxis(Enum):
-    MAKING_UP = auto()
     LOGICAL_CONSTRAINTS = auto()
-    SUBJECT_PARAPHRASING = auto()
     TWO_HOP = auto()
     FORWARD_TWO_HOP = auto()
+    SUBJECT_PARAPHRASING = auto()
+    MAKING_UP = auto()
     PREVIOUS_STORAGE = auto()
 
 
