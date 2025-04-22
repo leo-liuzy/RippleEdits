@@ -56,7 +56,10 @@ class TestCase:
 class LookupTestCase(TestCase):
     @staticmethod
     def from_dict(d):
-        tests = [LookupQuery.from_dict(test) for test in d['test_queries']]
+        import pdb; pdb.set_trace()
+        tests = [LookupQuery.from_dict(test) for test in d['test_queries'] if len([y for x in test["answers"] for y in ([x["value"]] + x["aliases"]) if y != ""]) > 0]
+        if len(tests) != len(d['test_queries']):
+            print(f"Warning: Some test queries have no answers. Skipping {len(d['test_queries']) - len(tests)} queries.")
         test_condition = d['test_condition']
         conditions = [LookupQuery.from_dict(condition) for condition in d['condition_queries']]
         return TestCase(tests, conditions, test_condition)

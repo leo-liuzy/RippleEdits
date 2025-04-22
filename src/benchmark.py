@@ -3,7 +3,7 @@ from enum import Enum, auto
 import json
 from pathlib import Path
 
-from fact import Fact
+from fact import Fact, LookupFact
 from testcase import TestCase, LookupTestCase
 
 
@@ -125,7 +125,7 @@ class LookupExample(Example):
 
     @staticmethod
     def from_dict(d):
-        fact = Fact.from_dict(d['edit'])
+        fact = LookupFact.from_dict(d['edit'])
         
         making_up_tests = [LookupTestCase.from_dict(test) for test in d['Relation_Specificity']]
         logical_constraints = [LookupTestCase.from_dict(test) for test in d['Logical_Generalization']]
@@ -135,7 +135,8 @@ class LookupExample(Example):
         prev_storage_tests = [LookupTestCase.from_dict(test) for test in d['Forgetfulness']]
         # import pdb; pdb.set_trace()
         if d['example_type'] in ['random', 'popular']:
-            previous_fact = Fact.from_dict(d['edit']['original_fact'])
+            # import pdb; pdb.set_trace()
+            previous_fact = LookupFact.from_dict(d['edit']['original_fact'])
             return CounterFactualExample(fact, previous_fact, making_up_tests, logical_constraints,
                                          subject_paraphrasing_tests, two_hop_tests, forward_two_hop_tests, prev_storage_tests)
         elif d['example_type'] == 'recent':

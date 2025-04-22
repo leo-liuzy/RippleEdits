@@ -71,19 +71,44 @@ class LookupQuery:
         self.answers = deepcopy(answers)
         self.query_prompt = query_prompt
 
-    def get_query_prompt(self):
-        return self._relation.phrase(get_label(self._subject_id))
-
     # def to_dict(self):
     #     d = super().to_dict()
     #     return d
+    @staticmethod
+    def _filter_answers(answers):
+        filtered_answers = []
+        for answer in answers:
+            if len(answer) > 1 or answer.isdigit():
+                filtered_answers.append(answer)
+        return filtered_answers
 
     def get_answers(self):
-        return self.answers
+        answers = []
+        for target in self._targets_ids:
+            if type(target) is str:
+                target_answer = [get_label(target)] + get_aliases(target)
+            else:
+                target_answer = [str(target)]
+            answers.append(self._filter_answers(target_answer))
+        return answers
+
+    def get_lookup_answers(self):
+        return [self.answers]
     
     def get_query_prompt(self):
         return self.query_prompt
     
+    def to_dict(self):
+        return {
+            'prompt': self.get_query_prompt(),
+            'answers': self.get_answers(),
+            'query_type': 'regular',
+            'subject_id': self._subject_id,
+            'relation': self._relation.name,
+            'target_ids': self._targets_ids,
+            'phrase': self._phrase,
+        }
+        
     @staticmethod
     def from_dict(d):
         subject_id = d['subject_id']
@@ -116,11 +141,20 @@ class LookupTwoHopQuery(LookupQuery):
         self.query_prompt = query_prompt
         self.answers = deepcopy(answers)
     
-    def get_answers(self):
-        return self.answers
+    # def get_answers(self):
+    #     return self.answers
     
-    def get_query_prompt(self):
-        return self.query_prompt
+    # def get_query_prompt(self):
+        # return self.query_prompt
+    def get_answers(self):
+        answers = []
+        for target in self._second_hop_target_ids:
+            if type(target) is str:
+                target_answer = [get_label(target)] + get_aliases(target)
+            else:
+                target_answer = [str(target)]
+            answers.append(self._filter_answers(target_answer))
+        return answers
     
     
 class TwoHopQuery(Query):

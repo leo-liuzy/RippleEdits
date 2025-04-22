@@ -2,7 +2,7 @@ from collections import defaultdict
 
 import os
 from benchmark import Dataset, Example, TestsAxis, LookupExample, LookupDataset
-from modeleditor import ROMEModelEditor, InContextModelEditor, MENDModelEditor, MEMITModelEditor, NoEditModelEditor, KnowledgePropagatorModelEditorLookup
+from modeleditor import ROMEModelEditor, InContextModelEditor, MENDModelEditor, MEMITModelEditor, NoEditModelEditor, KnowledgePropagatorModelEditorLookup, NoEditModelEditorLookup, InContextModelEditorLookup
 from queryexecutor import GPT2QueryExecutor, GPT3QueryExecutor, GPTJQueryExecutor, GPTNeoXQueryExecutor, \
     LlamaQueryExecutor, Llama3QueryExecutor, LookupQueryExecutor
 from testrunner import ExampleResult
@@ -106,7 +106,9 @@ if __name__ == '__main__':
     model = 'llama3.1-1b-base-eos-sft-lookup'
     recent_popular_path = f"{os.getenv('PROJ_PLAYGROUND')}/KE-by-CP/data/ripple_edits/meta_train/recent+popular/test.jsonl"
     all_path = f"{os.getenv('PROJ_PLAYGROUND')}/KE-by-CP/data/ripple_edits/meta_train/all/test.jsonl"
-    editor = "know-prop"
+    # editor = "know-prop"
+    editor = "no-edit"
+    # editor = "in-context"
     # get_fact_prompt
     dataset_path = all_path
 
@@ -118,7 +120,8 @@ if __name__ == '__main__':
     else:
         raise ValueError(f'Unknown dataset path: {dataset_path}')
 
-    experiment_name = f'{model}_{editor}_{dataset_name}'
+    answer_lookup = True
+    experiment_name = f'{model}_{editor}_{dataset_name} [answer_lookup={answer_lookup}]'
     print(experiment_name)
     
 
@@ -126,7 +129,7 @@ if __name__ == '__main__':
     if model == 'llama3.1-1b-base-eos-sft':
         query_executor = Llama3QueryExecutor(model_name_or_path=f"{os.getenv('PROJ_PLAYGROUND')}/mend/models/Llama-3.2-1B-eos-sft", edit_config_name="llama3.2-1B-eos-sft-mid-upper")
     elif model == 'llama3.1-1b-base-eos-sft-lookup':
-        query_executor = LookupQueryExecutor(model_name_or_path=f"{os.getenv('PROJ_PLAYGROUND')}/mend/models/Llama-3.2-1B-eos-sft", edit_config_name="llama3.2-1B-eos-sft-mid-upper",)
+        query_executor = LookupQueryExecutor(model_name_or_path=f"{os.getenv('PROJ_PLAYGROUND')}/mend/models/Llama-3.2-1B-eos-sft", edit_config_name="llama3.2-1B-eos-sft-mid-upper", use_answer_in_files=answer_lookup)
     else:
         if model == 'llama3.1-1b-base-eos-sft-lookup':
             pass
@@ -140,9 +143,11 @@ if __name__ == '__main__':
     elif editor == 'memit':
         model_editor = MEMITModelEditor(query_executor)
     elif editor == 'in-context':
-        model_editor = InContextModelEditor(query_executor)
+        # model_editor = InContextModelEditor(query_executor)
+        model_editor = InContextModelEditorLookup(query_executor)
     elif editor == "no-edit":
-        model_editor = NoEditModelEditor(query_executor)
+        # model_editor = NoEditModelEditor(query_executor)
+        model_editor = NoEditModelEditorLookup(query_executor)
     elif editor == "know-prop":
         model_editor = KnowledgePropagatorModelEditorLookup(query_executor)
     else:
@@ -194,7 +199,8 @@ if __name__ == '__main__':
         for propagation_type in TestsAxis:
             if propagation_type in evaluation_results:
                 executed_portion_dict[propagation_type] += evaluation_results[propagation_type][1]
-
+    
+    print(experiment_name)
     res_str = f'skip_preconditions={skip_preconditions}\n'
     print(res_str)
     for propagation_type in TestsAxis:

@@ -64,7 +64,7 @@ class TestRunner:
             # import pdb; pdb.set_trace()
             test_case_results = []
             for test_query in test_case.get_test_queries():
-                print('Executing test query')
+                # print('Executing test query')
                 test_case_results.append(self._query_executor.execute_query(test_query))
             # import pdb; pdb.set_trace()
             if test_case.get_test_condition() == TestCase.OR_TEST_CONDITION and True in test_case_results:

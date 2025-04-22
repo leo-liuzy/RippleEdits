@@ -132,33 +132,54 @@ class MENDModelEditor(RomeStyleModelEditor):
 
         sys.path.remove('..')
         os.chdir('../..')
-        
-    
-class KnowledgePropagatorModelEditorLookup(RomeStyleModelEditor):
 
-    def __init__(self, query_executor):
-        super().__init__(query_executor)
-        self.df = pd.read_excel("/u/zliu/datastor1/mend/ripple_exp_output/ripple_edits_all_heavy-noshare-mid-upper3_all-in-outer/ripple_edits/mend_eval_loss=clm_input=seen_n=500_prompt=no_w-gen_wo-icl_e+s_all-question.xlsx")
+class EditorLookup(RomeStyleModelEditor):
         
 
     def edit_model(self, fact):
         # from baselines.mend import MENDHyperParams, MendRewriteExecutor
-        
-        edit_fact = fact.get_fact_phrased()
+        assert hasattr(self, "_column_name")
+        edit_fact = fact.get_fact_lookup_prompt()
         edit_subdf_content = []
+        # import pdb; pdb.set_trace()
         for i, r in self.df.iterrows():
-            if edit_fact in r['edit_input']:
+            if edit_fact in r[self._column_name]:
                 edit_subdf_content.append(r)
         edit_subdf = pd.DataFrame(edit_subdf_content)
+        assert len(edit_subdf) > 0
+        # if len(edit_subdf) == 0:
+            # import pdb; pdb.set_trace()
         assert len(edit_subdf["id"].unique()) == 1
         question2generated_answer = {}
         questions = edit_subdf["question"].tolist()
         predicted_answers = edit_subdf["predicted_answer"].tolist()
         for q_i, q in enumerate(questions):
             if q not in question2generated_answer:
-                question2generated_answer[q] = predicted_answers[q_i]
+                question2generated_answer[q] = str(predicted_answers[q_i])
             else:
-                assert question2generated_answer[q] == predicted_answers[q_i]
+                assert question2generated_answer[q] == str(predicted_answers[q_i])
         self._query_executor._lookup_table = deepcopy(question2generated_answer)
         # import pdb; pdb.set_trace()
+           
+    
+class NoEditModelEditorLookup(EditorLookup):
+
+    def __init__(self, query_executor):
+        super().__init__(query_executor)
+        self.df = pd.read_excel(f"{os.getenv('PROJ_PLAYGROUND')}/mend/ripple_exp_output/llama3.2-1B-eos-sft/all/base_n=500_prompt=no_w-gen_wo-icl_ice=False.xlsx")
+        self._column_name = "input"
+
+class InContextModelEditorLookup(EditorLookup):
+    
+    def __init__(self, query_executor):
+        super().__init__(query_executor)
+        self.df = pd.read_excel(f"{os.getenv('PROJ_PLAYGROUND')}/mend/ripple_exp_output/llama3.2-1B-eos-sft/all/base_n=500_prompt=no_w-gen_wo-icl_ice=True.xlsx")
+        self._column_name = "input"
+
+class KnowledgePropagatorModelEditorLookup(EditorLookup):
+
+    def __init__(self, query_executor):
+        super().__init__(query_executor)
+        self.df = pd.read_excel(f"{os.getenv('PROJ_PLAYGROUND')}/mend/ripple_exp_output/ripple_edits_all_heavy-noshare-mid-upper3_all-in-outer/ripple_edits/mend_eval_loss=clm_input=seen_n=500_prompt=no_w-gen_wo-icl_e+s_all-question.xlsx")
+        self._column_name = "edit_input"
         

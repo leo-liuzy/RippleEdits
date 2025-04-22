@@ -178,7 +178,7 @@ class GPT3QueryExecutor(QueryExecutor):
 
 class LookupQueryExecutor(QueryExecutor):
 
-    def __init__(self, model_size='1b', device=None, model=None, tokenizer=None, model_name_or_path=None, edit_config_name=None):
+    def __init__(self, model_size='1b', device=None, model=None, tokenizer=None, model_name_or_path=None, edit_config_name=None, use_answer_in_files=False):
         import os
         self._model_size = model_size
         self._model_name = os.path.basename(model_name_or_path) if not edit_config_name else edit_config_name
@@ -187,6 +187,7 @@ class LookupQueryExecutor(QueryExecutor):
             tokenizer = AutoTokenizer.from_pretrained(model_name_or_path, use_fast=False, add_bos_token=True)
             tokenizer.add_special_tokens({"pad_token": "[PAD]"})
             tokenizer.padding_side = "left"
+        self._use_answer_in_files = use_answer_in_files
         # tokenizer.pad_token = tokenizer.eos_token
         # if model is None:
         #     model = LlamaForCausalLM.from_pretrained(model_name_or_path, device_map="auto", offload_folder="offload", offload_state_dict=True)
@@ -200,8 +201,27 @@ class LookupQueryExecutor(QueryExecutor):
 
     def _generate_text(self, prompt, length):
         # import pdb; pdb.set_trace()
-        assert hasattr(self._model, '_lookup_table'), "Model does not have a lookup table"
+        assert hasattr(self, '_lookup_table'), "Model does not have a lookup table"
+        # if prompt not in self._lookup_table:
+        #     return None
         assert prompt in self._lookup_table, f"Prompt '{prompt}' not found in lookup table"
         predicted_answer = self._lookup_table[prompt]
         
         return prompt + " " + predicted_answer.strip()
+    
+    def execute_query(self, query, answer_length=30):
+        prompt = self._prompt_context + query.get_query_prompt()
+        model_answer = self._generate_text(prompt, len(prompt) + answer_length)
+        # import pdb; pdb.set_trace()
+        if model_answer is None:
+            return False
+        # return self._verify_answer(model_answer.strip(), query.get_answers())
+        if self._use_answer_in_files:
+            gold_answers = query.get_lookup_answers()
+        else:
+            gold_answers = query.get_answers()
+        
+        assert all([isinstance(ans, list) for ans in gold_answers]), f"Expected all answers to be lists, but got {gold_answers}"
+        # import pdb; pdb.set_trace()
+        
+        return self._verify_answer(model_answer.strip(), gold_answers)
