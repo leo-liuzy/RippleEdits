@@ -36,14 +36,14 @@ class TestRunner:
                         test_results[TestResult.NOT_EXECUTED].append(test_case)
 
         # Check if fact is known/unknown according to example type
-        if isinstance(example, RecentlyAddedExample):
-            print('Executing fact check query')
-            if self._query_executor.execute_query(example.fact.get_fact_query()):
-                example_result = ExampleResult.NEW_FACT_KNOWN
-        elif isinstance(example, CounterFactualExample):
-            print('Executing fact check query')
-            if not self._query_executor.execute_query(example.previous_fact.get_fact_query()):
-                example_result = ExampleResult.PREV_FACT_UNKNOWN
+        # if isinstance(example, RecentlyAddedExample):
+        #     print('Executing fact check query')
+        #     if self._query_executor.execute_query(example.fact.get_fact_query()):
+        #         example_result = ExampleResult.NEW_FACT_KNOWN
+        # elif isinstance(example, CounterFactualExample):
+        #     print('Executing fact check query')
+        #     if not self._query_executor.execute_query(example.previous_fact.get_fact_query()):
+        #         example_result = ExampleResult.PREV_FACT_UNKNOWN
         # import pdb; pdb.set_trace()
         if self._model_editor is None:
             return example_result, test_results
@@ -53,10 +53,10 @@ class TestRunner:
             self._model_editor.edit_model(example.fact)
 
         # Test edit
-        print(f'Executing testing edit: {example.fact.get_fact_query().to_dict()}')
-        print(f'Executing testing edit result: {self._query_executor.execute_query(example.fact.get_fact_query())}')
-        if not self._query_executor.execute_query(example.fact.get_fact_query()):
-            example_result = ExampleResult.EDIT_FAILED
+        # print(f'Executing testing edit: {example.fact.get_fact_query().to_dict()}')
+        # print(f'Executing testing edit result: {self._query_executor.execute_query(example.fact.get_fact_query())}')
+        # if not self._query_executor.execute_query(example.fact.get_fact_query()):
+            # example_result = ExampleResult.EDIT_FAILED
         # import pdb; pdb.set_trace()
         # Test modified model
         for test_case in test_cases:

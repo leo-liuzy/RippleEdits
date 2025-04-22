@@ -1,5 +1,6 @@
 from relation import Relation
 from wikidata.utils import get_label, get_aliases
+from copy import deepcopy
 
 
 class Query:
@@ -60,7 +61,68 @@ class Query:
         else:
             print('Unknown phrase type: ', d['query_type'])
 
+class LookupQuery:
 
+    def __init__(self, subject_id, relation, target_ids, query_prompt, phrase=None, answers=[]):
+        self._subject_id = subject_id
+        self._relation = relation
+        self._targets_ids = target_ids if type(target_ids) == list else [target_ids]
+        self._phrase = phrase
+        self.answers = deepcopy(answers)
+        self.query_prompt = query_prompt
+
+    def get_query_prompt(self):
+        return self._relation.phrase(get_label(self._subject_id))
+
+    # def to_dict(self):
+    #     d = super().to_dict()
+    #     return d
+
+    def get_answers(self):
+        return self.answers
+    
+    def get_query_prompt(self):
+        return self.query_prompt
+    
+    @staticmethod
+    def from_dict(d):
+        subject_id = d['subject_id']
+        relation = Relation[d['relation']]
+        target_ids = d['target_ids']
+        phrase = d['phrase']
+        
+        answers = []
+        for a in d["answers"]:
+            answers.extend([a["value"]] + a["aliases"])
+        query_prompt = d["prompt"]
+        
+        if d['query_type'] == 'regular':
+            return LookupQuery(subject_id, relation, target_ids, phrase=phrase, query_prompt=query_prompt, answers=answers)
+        
+        elif d['query_type'] == 'two_hop':
+            
+            second_relation = Relation[d['second_relation']]
+            second_hop_target_ids = d['second_hop_target_ids']
+            
+            return LookupTwoHopQuery(subject_id, relation, target_ids, second_relation, second_hop_target_ids, phrase, query_prompt=query_prompt, answers=answers)
+        else:
+            print('Unknown phrase type: ', d['query_type'])
+
+class LookupTwoHopQuery(LookupQuery):
+    def __init__(self, subject_id, relation, target_ids, second_relation, second_hop_target_ids, phrase, query_prompt, answers=[]):
+        super().__init__(subject_id, relation, target_ids, phrase)
+        self._second_relation = second_relation
+        self._second_hop_target_ids = second_hop_target_ids if type(second_hop_target_ids) == list else [second_hop_target_ids]
+        self.query_prompt = query_prompt
+        self.answers = deepcopy(answers)
+    
+    def get_answers(self):
+        return self.answers
+    
+    def get_query_prompt(self):
+        return self.query_prompt
+    
+    
 class TwoHopQuery(Query):
 
     def __init__(self, subject_id, relation, target_ids, second_relation, second_hop_target_ids, phrase):
@@ -90,3 +152,4 @@ class TwoHopQuery(Query):
                         if type(target) == str and len(target) >= 2 and target[0] == 'Q' and target[1].isdigit()
                         else {'value': str(target), 'aliases': []} for target in self._second_hop_target_ids]
         return d
+

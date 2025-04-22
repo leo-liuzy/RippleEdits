@@ -1,10 +1,10 @@
 from collections import defaultdict
 
 import os
-from benchmark import Dataset, Example, TestsAxis
-from modeleditor import ROMEModelEditor, InContextModelEditor, MENDModelEditor, MEMITModelEditor, NoEditModelEditor
+from benchmark import Dataset, Example, TestsAxis, LookupExample, LookupDataset
+from modeleditor import ROMEModelEditor, InContextModelEditor, MENDModelEditor, MEMITModelEditor, NoEditModelEditor, KnowledgePropagatorModelEditorLookup
 from queryexecutor import GPT2QueryExecutor, GPT3QueryExecutor, GPTJQueryExecutor, GPTNeoXQueryExecutor, \
-    LlamaQueryExecutor, Llama3QueryExecutor
+    LlamaQueryExecutor, Llama3QueryExecutor, LookupQueryExecutor
 from testrunner import ExampleResult
 from testrunner import TestRunner, TestResult
 from wikidata.utils import write_json
@@ -56,6 +56,7 @@ class Evaluator:
 
     def evaluate_forward_two_hop_tests(self, example: Example):
         # Compositionality_II
+        # import pdb; pdb.set_trace()
         return self.average_acc(example, example.forward_two_hop_tests)
 
     def evaluate_prev_storage_tests(self, example: Example):
@@ -102,7 +103,7 @@ if __name__ == '__main__':
     # recently_modified_path = '../data/benchmark/recent.json'
     # fake_facts_path = '../data/benchmark/random.json'
     # top_views_path = '../data/benchmark/popular.json'
-    model = 'llama3.1-1b-base-eos-sft'
+    model = 'llama3.1-1b-base-eos-sft-lookup'
     recent_popular_path = f"{os.getenv('PROJ_PLAYGROUND')}/KE-by-CP/data/ripple_edits/meta_train/recent+popular/test.jsonl"
     all_path = f"{os.getenv('PROJ_PLAYGROUND')}/KE-by-CP/data/ripple_edits/meta_train/all/test.jsonl"
     editor = "know-prop"
@@ -124,8 +125,13 @@ if __name__ == '__main__':
     # davinvci_query_executor = Llama3QueryExecutor(model_size='text-davinci-003')
     if model == 'llama3.1-1b-base-eos-sft':
         query_executor = Llama3QueryExecutor(model_name_or_path=f"{os.getenv('PROJ_PLAYGROUND')}/mend/models/Llama-3.2-1B-eos-sft", edit_config_name="llama3.2-1B-eos-sft-mid-upper")
+    elif model == 'llama3.1-1b-base-eos-sft-lookup':
+        query_executor = LookupQueryExecutor(model_name_or_path=f"{os.getenv('PROJ_PLAYGROUND')}/mend/models/Llama-3.2-1B-eos-sft", edit_config_name="llama3.2-1B-eos-sft-mid-upper",)
     else:
-        raise ValueError(f'Unknown model: {model}')
+        if model == 'llama3.1-1b-base-eos-sft-lookup':
+            pass
+        else:
+            raise ValueError(f'Unknown model: {model}')
 
     if editor == 'mend':
         model_editor = MENDModelEditor(query_executor)
@@ -137,15 +143,18 @@ if __name__ == '__main__':
         model_editor = InContextModelEditor(query_executor)
     elif editor == "no-edit":
         model_editor = NoEditModelEditor(query_executor)
+    elif editor == "know-prop":
+        model_editor = KnowledgePropagatorModelEditorLookup(query_executor)
     else:
         raise ValueError(f'Unknown model editor: {editor}')
     # import pdb; pdb.set_trace()
+    
     evaluator = Evaluator(query_executor=query_executor, model_editor=model_editor)
-    dataset = Dataset.from_jsonl(dataset_path)
+    dataset = LookupDataset.from_jsonl(dataset_path)
 
     precisions_json = dict()
     # num_of_examples = 200
-    examples_for_eval = dataset.examples[:50]
+    examples_for_eval = dataset.examples[:]
     # examples_for_eval = dataset.sample(num_of_examples)
     eval_size = len(examples_for_eval)
 
@@ -160,9 +169,9 @@ if __name__ == '__main__':
         if (i + 1) % 10 == 0:
             print(f'{i + 1}/{eval_size}')
 
-        if example.fact.get_subject_label() == '' or example.fact.get_target_label() == '':
-            print(f'Skipping example: {example.to_dict()}')
-            continue
+        # if example.fact.get_subject_label() == '' or example.fact.get_target_label() == '':
+        #     print(f'Skipping example: {example.to_dict()}')
+        #     continue
 
         evaluation_results = evaluator.evaluate(example)
 

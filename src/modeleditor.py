@@ -1,8 +1,9 @@
 import sys
 import os
 import torch
-
+import pandas as pd
 from queryexecutor import QueryExecutor
+from copy import deepcopy
 
 
 class ModelEditor:
@@ -133,24 +134,31 @@ class MENDModelEditor(RomeStyleModelEditor):
         os.chdir('../..')
         
     
-class KnowledgePropagatorModelEditor(RomeStyleModelEditor):
+class KnowledgePropagatorModelEditorLookup(RomeStyleModelEditor):
 
     def __init__(self, query_executor):
         super().__init__(query_executor)
-        train_set =ZsreDataset(
-            self.query_executor.tokenizer, f"{base_dir}/data/zsre/structured_zeroshot-train-new_annotated_final.jsonl", config
-        )
-        val_set = ZsreDataset(self.query_executor.tokenizer, f"{base_dir}/data/zsre/structured_zeroshot-dev-new_annotated_final.jsonl", config)
-        
-        self.trainer = EditTrainer(alg, config, train_set, val_set)
+        self.df = pd.read_excel("/u/zliu/datastor1/mend/ripple_exp_output/ripple_edits_all_heavy-noshare-mid-upper3_all-in-outer/ripple_edits/mend_eval_loss=clm_input=seen_n=500_prompt=no_w-gen_wo-icl_e+s_all-question.xlsx")
         
 
     def edit_model(self, fact):
-        from baselines.mend import MENDHyperParams, MendRewriteExecutor
-
-        requests = self._format_fact_for_rome(fact)
-        hparams = MENDHyperParams.from_json(f'hparams/MEND/{self._model_name}.json')
-        _, self._changed_weights = MendRewriteExecutor().apply_to_model(self._model, self._tokenizer, requests, hparams, return_orig_weights=True)
-
-        sys.path.remove('..')
-        os.chdir('../..')
+        # from baselines.mend import MENDHyperParams, MendRewriteExecutor
+        
+        edit_fact = fact.get_fact_phrased()
+        edit_subdf_content = []
+        for i, r in self.df.iterrows():
+            if edit_fact in r['edit_input']:
+                edit_subdf_content.append(r)
+        edit_subdf = pd.DataFrame(edit_subdf_content)
+        assert len(edit_subdf["id"].unique()) == 1
+        question2generated_answer = {}
+        questions = edit_subdf["question"].tolist()
+        predicted_answers = edit_subdf["predicted_answer"].tolist()
+        for q_i, q in enumerate(questions):
+            if q not in question2generated_answer:
+                question2generated_answer[q] = predicted_answers[q_i]
+            else:
+                assert question2generated_answer[q] == predicted_answers[q_i]
+        self._query_executor._lookup_table = deepcopy(question2generated_answer)
+        # import pdb; pdb.set_trace()
+        

@@ -1,4 +1,4 @@
-from src.query import Query
+from src.query import Query, LookupQuery
 
 
 class TestCase:
@@ -52,3 +52,11 @@ class TestCase:
             res += f"Query: {query_dict['prompt']}, " \
                    f"Answer: {query_dict['answers'][0]['value']}\n"
         return res
+
+class LookupTestCase(TestCase):
+    @staticmethod
+    def from_dict(d):
+        tests = [LookupQuery.from_dict(test) for test in d['test_queries']]
+        test_condition = d['test_condition']
+        conditions = [LookupQuery.from_dict(condition) for condition in d['condition_queries']]
+        return TestCase(tests, conditions, test_condition)
