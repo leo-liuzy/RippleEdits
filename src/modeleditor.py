@@ -134,52 +134,167 @@ class MENDModelEditor(RomeStyleModelEditor):
         os.chdir('../..')
 
 class EditorLookup(RomeStyleModelEditor):
-        
+    
+    def __init__(self, query_executor, ice=False):
+        super().__init__(query_executor)
+        self._ice = ice
 
     def edit_model(self, fact):
         # from baselines.mend import MENDHyperParams, MendRewriteExecutor
         assert hasattr(self, "_column_name")
         edit_fact = fact.get_fact_lookup_prompt()
+        if edit_fact == "The name of the screenwriter of The bomb : the weapon that changed the world is Laurent-Frédéric Bollée.":
+            edit_fact = "The name of the screenwriter of  is Laurent-Frédéric Bollée."
         edit_subdf_content = []
         # import pdb; pdb.set_trace()
         for i, r in self.df.iterrows():
             if edit_fact in r[self._column_name]:
                 edit_subdf_content.append(r)
         edit_subdf = pd.DataFrame(edit_subdf_content)
-        assert len(edit_subdf) > 0
-        # if len(edit_subdf) == 0:
-            # import pdb; pdb.set_trace()
+        # assert len(edit_subdf) > 0
+        if len(edit_subdf) == 0:
+            import pdb; pdb.set_trace()
+       
         assert len(edit_subdf["id"].unique()) == 1
         question2generated_answer = {}
         questions = edit_subdf["question"].tolist()
+        if self._ice:
+            tmp = "Imagine that " + edit_fact[0].lower() + edit_fact[1:]
+            assert all([tmp in q for q in questions])
+            # import pdb; pdb.set_trace()
+            questions = [q.replace(tmp, "", 1).strip() for q in questions]
+        
         predicted_answers = edit_subdf["predicted_answer"].tolist()
         for q_i, q in enumerate(questions):
             if q not in question2generated_answer:
                 question2generated_answer[q] = str(predicted_answers[q_i])
             else:
                 assert question2generated_answer[q] == str(predicted_answers[q_i])
+                
         self._query_executor._lookup_table = deepcopy(question2generated_answer)
         # import pdb; pdb.set_trace()
-           
+        
     
 class NoEditModelEditorLookup(EditorLookup):
 
-    def __init__(self, query_executor):
-        super().__init__(query_executor)
+    def __init__(self, query_executor, ice=False):
+        super().__init__(query_executor, ice)
         self.df = pd.read_excel(f"{os.getenv('PROJ_PLAYGROUND')}/mend/ripple_exp_output/llama3.2-1B-eos-sft/all/base_n=500_prompt=no_w-gen_wo-icl_ice=False.xlsx")
         self._column_name = "input"
 
 class InContextModelEditorLookup(EditorLookup):
     
-    def __init__(self, query_executor):
-        super().__init__(query_executor)
+    def __init__(self, query_executor, ice=True):
+        super().__init__(query_executor, ice)
         self.df = pd.read_excel(f"{os.getenv('PROJ_PLAYGROUND')}/mend/ripple_exp_output/llama3.2-1B-eos-sft/all/base_n=500_prompt=no_w-gen_wo-icl_ice=True.xlsx")
         self._column_name = "input"
 
 class KnowledgePropagatorModelEditorLookup(EditorLookup):
 
-    def __init__(self, query_executor):
-        super().__init__(query_executor)
-        self.df = pd.read_excel(f"{os.getenv('PROJ_PLAYGROUND')}/mend/ripple_exp_output/ripple_edits_all_heavy-noshare-mid-upper3_all-in-outer/ripple_edits/mend_eval_loss=clm_input=seen_n=500_prompt=no_w-gen_wo-icl_e+s_all-question.xlsx")
+    def __init__(self, query_executor, experiment_name="ripple_edits_all_heavy-noshare-mid-upper3_all-in-outer", ice=False):
+        super().__init__(query_executor, ice)
+        self.df = pd.read_excel(f"{os.getenv('PROJ_PLAYGROUND')}/mend/ripple_exp_output/{experiment_name}/ripple_edits/mend_eval_loss=clm_input=seen_n=500_prompt=no_w-gen_wo-icl_e+s_all-question.xlsx")
+        self._column_name = "edit_input"
+    
+    
+class CPTModelEditorLookup(EditorLookup):
+
+    def __init__(self, query_executor, experiment_name="Llama-3.2-1B-eos-sft_clm-baseline_lr=1e-05_epoch=4.0_tuned-params=midupper3-mlp", ice=False):
+        super().__init__(query_executor, ice)
+        self.df = pd.read_excel(f"{os.getenv('PROJ_PLAYGROUND')}/mend/ripple_exp_output/{experiment_name}/all_results_ALL_with_input.xlsx")
+        self._column_name = "edit_input"
+
+
+class MENDModelEditorLookup(EditorLookup):
+
+    def __init__(self, query_executor, experiment_name="zereFull_original_mend_share_top3", ice=False):
+        super().__init__(query_executor, ice)
+        self.df = pd.read_excel(f"{os.getenv('PROJ_PLAYGROUND')}/mend/ripple_exp_output/{experiment_name}/ripple_edits/mend_eval_loss=sft_input=seen_n=500_prompt=no_w-gen_wo-icl_e+s_all-question.xlsx")
         self._column_name = "edit_input"
         
+    def edit_model(self, fact):
+        # from baselines.mend import MENDHyperParams, MendRewriteExecutor
+        assert hasattr(self, "_column_name")
+        edit_fact = fact.get_fact_lookup_prompt()
+        
+        if edit_fact == "The name of the screenwriter of  is Laurent-Frédéric Bollée.":
+            edit_fact = "The name of the screenwriter of The bomb : the weapon that changed the world is Laurent-Frédéric Bollée."
+
+        
+        if edit_fact.endswith("."):
+            edit_fact = edit_fact[:-1]
+        edit_subdf_content = []
+        # import pdb; pdb.set_trace()
+        for i, r in self.df.iterrows():
+            if edit_fact in r[self._column_name]:
+                edit_subdf_content.append(r)
+        edit_subdf = pd.DataFrame(edit_subdf_content)
+        # if len(edit_subdf) == 0:
+            # import pdb; pdb.set_trace()
+        assert len(edit_subdf) > 0
+
+        assert len(edit_subdf["id"].unique()) == 1
+        question2generated_answer = {}
+        questions = edit_subdf["question"].tolist()
+        if self._ice:
+            tmp = "Imagine that " + edit_fact[0].lower() + edit_fact[1:]
+            assert all([tmp in q for q in questions])
+            # import pdb; pdb.set_trace()
+            questions = [q.replace(tmp, "", 1).strip() for q in questions]
+        
+        predicted_answers = edit_subdf["predicted_answer"].tolist()
+        for q_i, q in enumerate(questions):
+            if q not in question2generated_answer:
+                question2generated_answer[q] = str(predicted_answers[q_i])
+            else:
+                assert question2generated_answer[q] == str(predicted_answers[q_i])
+                
+        self._query_executor._lookup_table = deepcopy(question2generated_answer)
+        # import pdb; pdb.set_trace()
+        
+class MEMITModelEditorLookup(EditorLookup):
+    def __init__(self, query_executor, experiment_name="llama3.2-1B-eos-sft-mid-upper", ice=False):
+        super().__init__(query_executor, ice)
+        self.df = pd.read_excel(f"{os.getenv('PROJ_PLAYGROUND')}/mend/ripple_exp_output/{experiment_name}/ripple_edits/memit(ripple_all)_eval_loss=clm_input=seen_n=500_prompt=no_w-gen_wo-icl_e+s_all-question.xlsx")
+        self.base_df = pd.read_excel(f"{os.getenv('PROJ_PLAYGROUND')}/mend/ripple_exp_output/llama3.2-1B-eos-sft/all/base_n=500_prompt=no_w-gen_wo-icl_ice=False.xlsx")
+        
+        self._column_name = "edit_input"
+        self._base_column_name = "input"
+        
+    def edit_model(self, fact):
+        # from baselines.mend import MENDHyperParams, MendRewriteExecutor
+        assert hasattr(self, "_column_name")
+        edit_fact = fact.get_fact_lookup_prompt()
+        
+        if edit_fact == "The name of the screenwriter of  is Laurent-Frédéric Bollée.":
+            edit_fact = "The name of the screenwriter of The bomb : the weapon that changed the world is Laurent-Frédéric Bollée."
+
+        
+        edit_subdf_content = []
+        # import pdb; pdb.set_trace()
+        for i, r in self.df.iterrows():
+            if edit_fact in r[self._column_name]:
+                edit_subdf_content.append(r)
+        edit_subdf = pd.DataFrame(edit_subdf_content)
+        if len(edit_subdf) == 0:
+            # import pdb; pdb.set_trace()
+            edit_subdf_content = []
+            # import pdb; pdb.set_trace()
+            for i, r in self.base_df.iterrows():
+                if edit_fact in r[self._base_column_name]:
+                    edit_subdf_content.append(r)
+            edit_subdf = pd.DataFrame(edit_subdf_content)
+        assert len(edit_subdf) > 0
+
+        assert len(edit_subdf["id"].unique()) == 1
+        question2generated_answer = {}
+        questions = edit_subdf["question"].tolist()
+        
+        predicted_answers = edit_subdf["predicted_answer"].tolist()
+        for q_i, q in enumerate(questions):
+            if q not in question2generated_answer:
+                question2generated_answer[q] = str(predicted_answers[q_i])
+            else:
+                assert question2generated_answer[q] == str(predicted_answers[q_i])
+                
+        self._query_executor._lookup_table = deepcopy(question2generated_answer)

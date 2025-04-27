@@ -178,7 +178,7 @@ class GPT3QueryExecutor(QueryExecutor):
 
 class LookupQueryExecutor(QueryExecutor):
 
-    def __init__(self, model_size='1b', device=None, model=None, tokenizer=None, model_name_or_path=None, edit_config_name=None, use_answer_in_files=False):
+    def __init__(self, model_size='1b', device=None, model=None, tokenizer=None, model_name_or_path=None, edit_config_name=None, use_answer_in_files=False, ice=False):
         import os
         self._model_size = model_size
         self._model_name = os.path.basename(model_name_or_path) if not edit_config_name else edit_config_name
@@ -188,12 +188,14 @@ class LookupQueryExecutor(QueryExecutor):
             tokenizer.add_special_tokens({"pad_token": "[PAD]"})
             tokenizer.padding_side = "left"
         self._use_answer_in_files = use_answer_in_files
+        assert self._use_answer_in_files, "use_answer_in_files must be True for LookupQueryExecutor"
         # tokenizer.pad_token = tokenizer.eos_token
         # if model is None:
         #     model = LlamaForCausalLM.from_pretrained(model_name_or_path, device_map="auto", offload_folder="offload", offload_state_dict=True)
         # import pdb; pdb.set_trace()
         # model.resize_token_embeddings(len(tokenizer))
         # model.generation_config.pad_token_id = tokenizer.pad_token_id
+        # self._ice = ice
         super().__init__(model, tokenizer, device, send_to_device=False)
 
     def get_model_name(self):
@@ -204,7 +206,9 @@ class LookupQueryExecutor(QueryExecutor):
         assert hasattr(self, '_lookup_table'), "Model does not have a lookup table"
         # if prompt not in self._lookup_table:
         #     return None
-        assert prompt in self._lookup_table, f"Prompt '{prompt}' not found in lookup table"
+            # import pdb; pdb.set_trace()
+
+        assert prompt in self._lookup_table, f"Prompt '{prompt}' not found in lookup table"    
         predicted_answer = self._lookup_table[prompt]
         
         return prompt + " " + predicted_answer.strip()

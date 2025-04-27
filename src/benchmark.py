@@ -124,20 +124,59 @@ class LookupExample(Example):
         }
 
     @staticmethod
-    def from_dict(d):
-        fact = LookupFact.from_dict(d['edit'])
+    def from_dict(d, filter_list: list = [], filter_mode: str = 'verbatim'):
         
-        making_up_tests = [LookupTestCase.from_dict(test) for test in d['Relation_Specificity']]
-        logical_constraints = [LookupTestCase.from_dict(test) for test in d['Logical_Generalization']]
-        subject_paraphrasing_tests = [LookupTestCase.from_dict(test) for test in d['Subject_Aliasing']]
-        two_hop_tests = [LookupTestCase.from_dict(test) for test in d['Compositionality_I']]
-        forward_two_hop_tests = [LookupTestCase.from_dict(test) for test in d['Compositionality_II']]
-        prev_storage_tests = [LookupTestCase.from_dict(test) for test in d['Forgetfulness']]
+        fact = LookupFact.from_dict(d['edit'])
+        edited_fact = fact.get_fact_lookup_prompt()
+        if edited_fact == "The name of the screenwriter of The bomb : the weapon that changed the world is Laurent-Frédéric Bollée.":
+            edited_fact = "The name of the screenwriter of  is Laurent-Frédéric Bollée."
+        
+        
+        sub_filter_list = [x for x in filter_list if x[0] == edited_fact]
+        # try:
+        #     assert len(filtered_list) > 0, edited_fact
+        # except AssertionError:
+        #     print('Filtered list is empty')
+        #     import pdb; pdb.set_trace()
+        if len(sub_filter_list) == 0 and len(filter_list) > 0:
+            # if this instance is not in the filter list, ignore the instance
+            return 
+        # for each test query in the example, check if it is in the filter list. If it is not, ignore the test query
+        # for tag in ['Relation_Specificity', 'Logical_Generalization', 'Subject_Aliasing', 'Compositionality_I', 'Compositionality_II', 'Forgetfulness']:
+        #     tests = d[tag]
+            
+        #     for test in tests:
+        #         import pdb; pdb.set_trace()
+                
+        making_up_tests = [LookupTestCase.from_dict(test, edited_fact=edited_fact, filter_mode=filter_mode) for test in d['Relation_Specificity']]
+        making_up_tests = [x for x in making_up_tests if x is not None]
+        
+        logical_constraints = [LookupTestCase.from_dict(test, edited_fact=edited_fact, filter_mode=filter_mode) for test in d['Logical_Generalization']]
+        logical_constraints = [x for x in logical_constraints if x is not None]
+        
+        subject_paraphrasing_tests = [LookupTestCase.from_dict(test, edited_fact=edited_fact, filter_mode=filter_mode) for test in d['Subject_Aliasing']]
+        subject_paraphrasing_tests = [x for x in subject_paraphrasing_tests if x is not None]
+        
+        two_hop_tests = [LookupTestCase.from_dict(test, edited_fact=edited_fact, filter_mode=filter_mode) for test in d['Compositionality_I']]
+        two_hop_tests = [x for x in two_hop_tests if x is not None]
+        
+        forward_two_hop_tests = [LookupTestCase.from_dict(test, edited_fact=edited_fact, filter_mode=filter_mode) for test in d['Compositionality_II']]
+        forward_two_hop_tests = [x for x in forward_two_hop_tests if x is not None]
+        
+        prev_storage_tests = [LookupTestCase.from_dict(test, edited_fact=edited_fact, filter_mode=filter_mode) for test in d['Forgetfulness']]
+        prev_storage_tests = [x for x in prev_storage_tests if x is not None]
+        
+        if len(making_up_tests + logical_constraints + subject_paraphrasing_tests + two_hop_tests + forward_two_hop_tests + prev_storage_tests) == 0:
+            # if this instance is not in the filter list, ignore the instance
+            return
+        
         # import pdb; pdb.set_trace()
+        
         if d['example_type'] in ['random', 'popular']:
             # import pdb; pdb.set_trace()
-            previous_fact = LookupFact.from_dict(d['edit']['original_fact'])
-            return CounterFactualExample(fact, previous_fact, making_up_tests, logical_constraints,
+            # previous_fact = LookupFact.from_dict(d['edit']['original_fact'])
+            return CounterFactualExample(fact, 
+                                         None, making_up_tests, logical_constraints,
                                          subject_paraphrasing_tests, two_hop_tests, forward_two_hop_tests, prev_storage_tests)
         elif d['example_type'] == 'recent':
             return RecentlyAddedExample(fact, making_up_tests, logical_constraints, subject_paraphrasing_tests,
@@ -237,7 +276,7 @@ class Dataset:
 
 class LookupDataset:
 
-    def __init__(self, examples: list):
+    def __init__(self, examples: list, filter_list: list = []):
         self.examples = examples
 
     def sample(self, k: int):
@@ -257,6 +296,10 @@ class LookupDataset:
         return Dataset([LookupExample.from_dict(example) for example in examples])
 
     @staticmethod
-    def from_jsonl(filename):
+    def from_jsonl(filename, filter_list: list = []):
         examples = load_jsonlines(filename)
-        return Dataset([LookupExample.from_dict(example) for example in examples])
+        dataset = [LookupExample.from_dict(example, filter_list=filter_list) for example in examples[:]]
+        dataset = [x for x in dataset if x is not None]
+        ret = Dataset(dataset)
+        # import pdb; pdb.set_trace()
+        return ret

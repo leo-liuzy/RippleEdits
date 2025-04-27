@@ -78,6 +78,7 @@ def wikidata_item_given_id(ent_id: str):
 
 
 def get_label(ent_id: str):
+    import pdb; pdb.set_trace()
     if isinstance(ent_id, list):
         if len(ent_id) > 0:
             ent_id = ent_id[0]

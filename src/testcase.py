@@ -55,9 +55,31 @@ class TestCase:
 
 class LookupTestCase(TestCase):
     @staticmethod
-    def from_dict(d):
-        import pdb; pdb.set_trace()
+    def from_dict(d, edited_fact = None, filter_mode: str = 'verbatim'):
+        
         tests = [LookupQuery.from_dict(test) for test in d['test_queries'] if len([y for x in test["answers"] for y in ([x["value"]] + x["aliases"]) if y != ""]) > 0]
+        # import pdb; pdb.set_trace()
+        filter_tests = []
+        for test in tests:
+            answers = test.get_lookup_answers()
+            assert len(answers) == 1, f"Filter test should have only one answer. Found: {answers}"
+            answers = answers[0]
+            if filter_mode == 'verbatim':
+                if answers[0] in edited_fact:
+                    # if the answer is in the edited input, we want to keep it
+                    filter_tests.append(test)
+            elif filter_mode == 'non-verbtaim':
+                if answers[0] not in edited_fact:
+                    # if the answer is not in the edited input, we want to keep it
+                    filter_tests.append(test)
+            else: 
+                assert filter_mode == 'all', f"Filter mode should be 'verbatim', 'not_verbatim' or 'all'. Found: {filter_mode}"
+                # if the answer is in the edited input, we want to keep it
+                filter_tests.append(test)
+        # import pdb; pdb.set_trace()
+        if len(filter_tests) == 0:
+            return 
+        tests = filter_tests
         if len(tests) != len(d['test_queries']):
             print(f"Warning: Some test queries have no answers. Skipping {len(d['test_queries']) - len(tests)} queries.")
         test_condition = d['test_condition']

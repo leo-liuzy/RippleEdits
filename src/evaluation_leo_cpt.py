@@ -2,7 +2,7 @@ from collections import defaultdict
 
 import os
 from benchmark import Dataset, Example, TestsAxis, LookupExample, LookupDataset
-from modeleditor import ROMEModelEditor, InContextModelEditor, MENDModelEditor, MEMITModelEditor, NoEditModelEditor, KnowledgePropagatorModelEditorLookup, NoEditModelEditorLookup, InContextModelEditorLookup, CPTModelEditorLookup, MENDModelEditorLookup, MEMITModelEditorLookup
+from modeleditor import ROMEModelEditor, InContextModelEditor, MENDModelEditor, MEMITModelEditor, NoEditModelEditor, KnowledgePropagatorModelEditorLookup, NoEditModelEditorLookup, InContextModelEditorLookup, CPTModelEditorLookup, MENDModelEditorLookup
 from queryexecutor import GPT2QueryExecutor, GPT3QueryExecutor, GPTJQueryExecutor, GPTNeoXQueryExecutor, \
     LlamaQueryExecutor, Llama3QueryExecutor, LookupQueryExecutor
 from testrunner import ExampleResult
@@ -73,11 +73,6 @@ class Evaluator:
         res[TestsAxis.PREVIOUS_STORAGE] = self.evaluate_prev_storage_tests(example)
         return res
 
-def load_json(fname: str):
-    import json
-    """Read json file."""
-    with open(fname, "r") as f:
-        return json.load(f)
 
 class ConditionsEvaluator(Evaluator):
 
@@ -90,8 +85,7 @@ if __name__ == '__main__':
     parser.add_argument('--model', type=str, default='llama3.1-1b-base-eos-sft')
     parser.add_argument('--editor', type=str, default='know-prop')
     parser.add_argument('--exp', type=str, default='ripple_edits_all_recent+popular_heavy-noshare-mid-upper3_all-in-outer')
-    parser.add_argument('--offline', action='store_true')
-    parser.add_argument('--verbatim_mode', type=str, default='all')
+    parser.add_argument('--offline', type=bool, default=True)
     parser.add_argument('--skip_preconditions', type=bool, default=True)
     args = parser.parse_args()
     models = [
@@ -118,23 +112,14 @@ if __name__ == '__main__':
     # top_views_path = '../data/benchmark/popular.json'
     model = 'llama3.1-1b-base-eos-sft-lookup'
     recent_popular_path = f"{os.getenv('PROJ_PLAYGROUND')}/KE-by-CP/data/ripple_edits/meta_train/recent+popular/test.jsonl"
-    all_path = f"{os.getenv('PROJ_PLAYGROUND')}/KE-by-CP/data/ripple_edits/meta_train/all/test_aug.jsonl"
+    all_path = f"{os.getenv('PROJ_PLAYGROUND')}/KE-by-CP/data/ripple_edits/meta_train/all/test.jsonl"
     editor = args.editor # "know-prop"
-    verbatim_mode = "verbatim" args.verbatim_mode # "all"
-    if verbatim_mode == "all":
-        filter_list = []
-    elif verbatim_mode == "verbtaim":
-        filter_list = [tuple([x[0], x[1], x[2]]) for x in load_json("/u/zliu/datastor1/KE-by-CP/data/ripple_edits/meta_train/all/llm_acc_verbtaim_queries.json")]
-    
-    else:
-        assert verbatim_mode == "non-verbtaim", "verbatim_mode should be either all, verbtaim or non-verbtaim"
-        filter_list = [tuple([x[0], x[1], x[2]]) for x in load_json("/u/zliu/datastor1/KE-by-CP/data/ripple_edits/meta_train/all/llm_acc_nonverbtaim_queries.json")]
     # editor = "no-edit"
     # editor = "in-context"
     # get_fact_prompt
     dataset_path = all_path
 
-    import pdb; pdb.set_trace()
+
     if dataset_path == all_path:
         dataset_name = 'all'
     elif dataset_path == recent_popular_path:
@@ -143,7 +128,7 @@ if __name__ == '__main__':
         raise ValueError(f'Unknown dataset path: {dataset_path}')
 
     offline = args.offline
-    experiment_name = f'{model}_{editor}_{dataset_name} [offline={offline}, verbatim={verbatim_mode}]+{args.exp}'
+    experiment_name = f'{model}_{editor}_{dataset_name} [offline={offline}]'
     print(experiment_name)
     
     exp = args.exp # "ripple_edits_all_recent+popular_heavy-noshare-mid-upper3_all-in-outer"
@@ -166,8 +151,7 @@ if __name__ == '__main__':
     elif editor == 'rome':
         model_editor = ROMEModelEditor(query_executor)
     elif editor == 'memit':
-        # model_editor = MEMITModelEditor(query_executor)
-        model_editor = MEMITModelEditorLookup(query_executor, experiment_name=exp)
+        model_editor = MEMITModelEditor(query_executor)
     elif editor == 'in-context':
         # model_editor = InContextModelEditor(query_executor)
         model_editor = InContextModelEditorLookup(query_executor, ice=True)
@@ -184,11 +168,11 @@ if __name__ == '__main__':
     # import pdb; pdb.set_trace()
     
     evaluator = Evaluator(query_executor=query_executor, model_editor=model_editor)
-    dataset = LookupDataset.from_jsonl(dataset_path, filter_list=filter_list, verbatim_mode=verbatim_mode)
+    dataset = LookupDataset.from_jsonl(dataset_path)
 
     precisions_json = dict()
     # num_of_examples = 200
-    examples_for_eval = dataset.examples[:]
+    examples_for_eval = dataset.examples[255:]
     # examples_for_eval = dataset.sample(num_of_examples)
     eval_size = len(examples_for_eval)
 

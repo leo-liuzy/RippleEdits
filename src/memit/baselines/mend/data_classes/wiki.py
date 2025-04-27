@@ -136,6 +136,7 @@ class GenDataset(Dataset):
         return labels
 
     def get_labels(self, ids):
+        import pdb; pdb.set_trace()
         self._check_padding(ids)
 
         return ids.masked_fill(ids == self.tok.pad_token_id, -100)

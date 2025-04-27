@@ -147,6 +147,8 @@ class LookupTwoHopQuery(LookupQuery):
     # def get_query_prompt(self):
         # return self.query_prompt
     def get_answers(self):
+        # import pdb; pdb.set_trace()
+        assert False, "This should not be called"
         answers = []
         for target in self._second_hop_target_ids:
             if type(target) is str:
